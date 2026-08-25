@@ -13,6 +13,7 @@ namespace ProcessDataAI.Services;
 public sealed class DocumentSearchService(
     PdfPigDocumentReader reader,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+    IChatClient chatClient,
     ILoggerFactory loggerFactory,
     ILogger<DocumentSearchService> logger) : IDisposable
 {
@@ -71,13 +72,21 @@ public sealed class DocumentSearchService(
             MaxTokensPerChunk = 500,
             OverlapTokens = 75
         };
-        IngestionChunker<string> chunker = new DocumentTokenChunker(chunkerOptions);
+        IngestionChunker<string> chunker = new SemanticSimilarityChunker(embeddingGenerator, chunkerOptions);
+
+        var enricherOptions = new EnricherOptions(chatClient)
+        {
+            LoggerFactory = loggerFactory,
+        };
+        IngestionDocumentProcessor imageAlternativeTextEnricher =
+            new ImageAlternativeTextEnricher(enricherOptions);
 
         _pipeline = new IngestionPipeline<string>(
             reader,
             chunker,
             _writer,
             loggerFactory: loggerFactory);
+        _pipeline.DocumentProcessors.Add(imageAlternativeTextEnricher);
 
         int successfulDocuments = 0;
         var stopwatch = Stopwatch.StartNew();

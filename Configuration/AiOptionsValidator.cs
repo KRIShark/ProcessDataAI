@@ -11,14 +11,16 @@ public sealed class AiOptionsValidator : IValidateOptions<AiOptions>
             return ValidateRequired(
                 ("AZURE_OPENAI_ENDPOINT", options.Azure.Endpoint),
                 ("AZURE_OPENAI_API_KEY", options.Azure.ApiKey),
-                ("AZURE_OPENAI_EMBEDDING_MODEL", options.Azure.EmbeddingModel));
+                ("AZURE_OPENAI_EMBEDDING_MODEL", options.Azure.EmbeddingModel),
+                ("AZURE_OPENAI_CHAT_MODEL", options.Azure.ChatModel));
         }
 
         if (options.Provider.Equals(AiOptions.OllamaProvider, StringComparison.OrdinalIgnoreCase))
         {
             return ValidateRequired(
                 ("OLLAMA_ENDPOINT", options.Ollama.Endpoint),
-                ("OLLAMA_EMBEDDING_MODEL", options.Ollama.EmbeddingModel));
+                ("OLLAMA_EMBEDDING_MODEL", options.Ollama.EmbeddingModel),
+                ("OLLAMA_CHAT_MODEL", options.Ollama.ChatModel));
         }
 
         return ValidateOptionsResult.Fail(

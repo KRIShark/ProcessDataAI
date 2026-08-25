@@ -25,24 +25,49 @@ public sealed class PdfPigDocumentReader(ILogger<PdfPigDocumentReader> logger) :
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 string text = ContentOrderTextExtractor.GetText(page).Trim();
-                if (string.IsNullOrWhiteSpace(text))
+                var section = new IngestionDocumentSection();
+                if (!string.IsNullOrWhiteSpace(text))
                 {
-                    continue;
+                    section.Elements.Add(new IngestionDocumentParagraph(text) { PageNumber = page.Number });
                 }
 
-                var section = new IngestionDocumentSection();
-                section.Elements.Add(new IngestionDocumentParagraph(text) { PageNumber = page.Number });
-                document.Sections.Add(section);
+                int imageNumber = 0;
+                foreach (var pdfImage in page.GetImages())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!pdfImage.TryGetPng(out byte[]? pngContent))
+                    {
+                        logger.LogWarning(
+                            "Skipped an unsupported image on page {PageNumber} of {DocumentName}",
+                            page.Number,
+                            identifier);
+                        continue;
+                    }
+
+                    imageNumber++;
+                    section.Elements.Add(new IngestionDocumentImage(
+                        $"![Image {imageNumber} on page {page.Number}](embedded-image)")
+                    {
+                        Content = pngContent,
+                        MediaType = "image/png",
+                        PageNumber = page.Number
+                    });
+                }
+
+                if (section.Elements.Count > 0)
+                {
+                    document.Sections.Add(section);
+                }
             }
 
             if (document.Sections.Count == 0)
             {
                 throw new InvalidDataException(
-                    $"PDF '{identifier}' contains no extractable text. Scanned PDFs require OCR, which this sample intentionally does not use.");
+                    $"PDF '{identifier}' contains no extractable text or supported images. Scanned text requires OCR, which this sample intentionally does not use.");
             }
 
             logger.LogInformation(
-                "Extracted text from {PageCount} page(s) in {DocumentName}",
+                "Extracted content from {PageCount} page(s) in {DocumentName}",
                 document.Sections.Count,
                 identifier);
             return Task.FromResult(document);

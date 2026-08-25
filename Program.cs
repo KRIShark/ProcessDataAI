@@ -34,15 +34,22 @@ static async Task<int> RunAsync(string[] args)
                 options.Azure.Endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"] ?? string.Empty;
                 options.Azure.ApiKey = builder.Configuration["AZURE_OPENAI_API_KEY"] ?? string.Empty;
                 options.Azure.EmbeddingModel = builder.Configuration["AZURE_OPENAI_EMBEDDING_MODEL"] ?? string.Empty;
+                options.Azure.ChatModel = builder.Configuration["AZURE_OPENAI_CHAT_MODEL"] ?? string.Empty;
                 options.Ollama.Endpoint = builder.Configuration["OLLAMA_ENDPOINT"] ?? string.Empty;
                 options.Ollama.EmbeddingModel = builder.Configuration["OLLAMA_EMBEDDING_MODEL"] ?? string.Empty;
+                options.Ollama.ChatModel = builder.Configuration["OLLAMA_CHAT_MODEL"] ?? string.Empty;
             })
             .ValidateOnStart();
         builder.Services.AddSingleton<IValidateOptions<AiOptions>, AiOptionsValidator>();
         builder.Services.AddSingleton<PdfPigDocumentReader>();
         builder.Services.AddSingleton<EmbeddingGeneratorFactory>();
+        builder.Services.AddSingleton<ChatClientFactory>();
         builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
             services => services.GetRequiredService<EmbeddingGeneratorFactory>().Create());
+        builder.Services.AddSingleton<IChatClient>(
+            services => new ConsoleLoggingChatClient(
+                services.GetRequiredService<ChatClientFactory>().Create(),
+                services.GetRequiredService<ILogger<ConsoleLoggingChatClient>>()));
         builder.Services.AddSingleton<DocumentSearchService>();
 
         using IHost host = builder.Build();
