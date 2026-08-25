@@ -23,8 +23,16 @@ public sealed class AiOptionsValidator : IValidateOptions<AiOptions>
                 ("OLLAMA_CHAT_MODEL", options.Ollama.ChatModel));
         }
 
+        if (options.Provider.Equals(AiOptions.OpenAiProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            return ValidateRequired(
+                ("OPENAI_ENDPOINT", options.OpenAI.Endpoint),
+                ("OPENAI_EMBEDDING_MODEL", options.OpenAI.EmbeddingModel),
+                ("OPENAI_CHAT_MODEL", options.OpenAI.ChatModel));
+        }
+
         return ValidateOptionsResult.Fail(
-            "AI_PROVIDER must be either 'Azure' or 'Ollama' in the .env file.");
+            "AI_PROVIDER must be 'Azure', 'OpenAI', or 'Ollama' in the .env file.");
     }
 
     private static ValidateOptionsResult ValidateRequired(params (string Name, string Value)[] settings)

@@ -27,9 +27,27 @@ public sealed class EmbeddingGeneratorFactory(
             return client.GetEmbeddingClient(azure.EmbeddingModel).AsIEmbeddingGenerator();
         }
 
-        OllamaOptions ollama = settings.Ollama;
-        var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(ollama.Endpoint) };
-        var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
-        return ollamaClient.GetEmbeddingClient(ollama.EmbeddingModel).AsIEmbeddingGenerator();
+        if (settings.Provider.Equals(AiOptions.OpenAiProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            OpenAiOptions openAI = settings.OpenAI;
+            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(openAI.Endpoint) };
+            var client = new OpenAIClient(
+                new ApiKeyCredential(GetApiKey(openAI.ApiKey)),
+                clientOptions);
+            return client.GetEmbeddingClient(openAI.EmbeddingModel).AsIEmbeddingGenerator();
+        }
+
+        if (settings.Provider.Equals(AiOptions.OllamaProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            OllamaOptions ollama = settings.Ollama;
+            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(ollama.Endpoint) };
+            var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
+            return ollamaClient.GetEmbeddingClient(ollama.EmbeddingModel).AsIEmbeddingGenerator();
+        }
+
+        throw new InvalidOperationException($"Unsupported AI provider '{settings.Provider}'.");
     }
+
+    private static string GetApiKey(string apiKey) =>
+        string.IsNullOrWhiteSpace(apiKey) ? "not-required" : apiKey;
 }

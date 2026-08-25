@@ -35,6 +35,10 @@ static async Task<int> RunAsync(string[] args)
                 options.Azure.ApiKey = builder.Configuration["AZURE_OPENAI_API_KEY"] ?? string.Empty;
                 options.Azure.EmbeddingModel = builder.Configuration["AZURE_OPENAI_EMBEDDING_MODEL"] ?? string.Empty;
                 options.Azure.ChatModel = builder.Configuration["AZURE_OPENAI_CHAT_MODEL"] ?? string.Empty;
+                options.OpenAI.Endpoint = builder.Configuration["OPENAI_ENDPOINT"] ?? string.Empty;
+                options.OpenAI.ApiKey = builder.Configuration["OPENAI_API_KEY"] ?? string.Empty;
+                options.OpenAI.EmbeddingModel = builder.Configuration["OPENAI_EMBEDDING_MODEL"] ?? string.Empty;
+                options.OpenAI.ChatModel = builder.Configuration["OPENAI_CHAT_MODEL"] ?? string.Empty;
                 options.Ollama.Endpoint = builder.Configuration["OLLAMA_ENDPOINT"] ?? string.Empty;
                 options.Ollama.EmbeddingModel = builder.Configuration["OLLAMA_EMBEDDING_MODEL"] ?? string.Empty;
                 options.Ollama.ChatModel = builder.Configuration["OLLAMA_CHAT_MODEL"] ?? string.Empty;

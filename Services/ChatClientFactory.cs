@@ -25,9 +25,27 @@ public sealed class ChatClientFactory(
             return azureClient.GetChatClient(settings.Azure.ChatModel).AsIChatClient();
         }
 
-        logger.LogInformation("Using Ollama chat model {Model}", settings.Ollama.ChatModel);
-        var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(settings.Ollama.Endpoint) };
-        var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
-        return ollamaClient.GetChatClient(settings.Ollama.ChatModel).AsIChatClient();
+        if (settings.Provider.Equals(AiOptions.OpenAiProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogInformation("Using OpenAI-compatible chat model {Model}", settings.OpenAI.ChatModel);
+            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(settings.OpenAI.Endpoint) };
+            var client = new OpenAIClient(
+                new ApiKeyCredential(GetApiKey(settings.OpenAI.ApiKey)),
+                clientOptions);
+            return client.GetChatClient(settings.OpenAI.ChatModel).AsIChatClient();
+        }
+
+        if (settings.Provider.Equals(AiOptions.OllamaProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogInformation("Using Ollama chat model {Model}", settings.Ollama.ChatModel);
+            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(settings.Ollama.Endpoint) };
+            var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
+            return ollamaClient.GetChatClient(settings.Ollama.ChatModel).AsIChatClient();
+        }
+
+        throw new InvalidOperationException($"Unsupported AI provider '{settings.Provider}'.");
     }
+
+    private static string GetApiKey(string apiKey) =>
+        string.IsNullOrWhiteSpace(apiKey) ? "not-required" : apiKey;
 }
