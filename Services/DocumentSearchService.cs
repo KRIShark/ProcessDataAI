@@ -14,6 +14,7 @@ public sealed class DocumentSearchService(
     PdfPigDocumentReader reader,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
     IChatClient chatClient,
+    DocumentCatalog documentCatalog,
     ILoggerFactory loggerFactory,
     ILogger<DocumentSearchService> logger) : IDisposable
 {
@@ -39,6 +40,8 @@ public sealed class DocumentSearchService(
         {
             throw new InvalidOperationException($"Data directory '{dataDirectory}' contains no PDF files.");
         }
+
+        await documentCatalog.RegisterSourcesAsync(pdfs, cancellationToken);
 
         logger.LogInformation("Discovered {PdfCount} PDF file(s) in {DataDirectory}", pdfs.Length, dataDirectory);
         logger.LogInformation("Generating an embedding to determine the provider vector dimensions");
@@ -85,6 +88,7 @@ public sealed class DocumentSearchService(
             _writer,
             loggerFactory: loggerFactory);
         _pipeline.DocumentProcessors.Add(imageAlternativeTextEnricher);
+        _pipeline.DocumentProcessors.Add(new DocumentCatalogProcessor(documentCatalog));
 
         int successfulDocuments = 0;
         var stopwatch = Stopwatch.StartNew();
@@ -145,6 +149,51 @@ public sealed class DocumentSearchService(
         }
     }
 
+    public async Task<IReadOnlyList<DocumentSearchMatch>> SearchDocumentsAsync(
+        string query,
+        int maxResults,
+        CancellationToken cancellationToken)
+    {
+        if (!_isIngested || _writer is null)
+        {
+            throw new InvalidOperationException("Documents must be ingested before searching.");
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxResults, 1);
+
+        var matches = new List<DocumentSearchMatch>(maxResults);
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int candidateCount = Math.Clamp(maxResults * 4, maxResults, 50);
+        await foreach (VectorSearchResult<Dictionary<string, object?>> result in
+            _writer.VectorStoreCollection.SearchAsync(
+                query,
+                top: candidateCount,
+                cancellationToken: cancellationToken))
+        {
+            string? identifier = GetString(
+                result.Record,
+                "documentid",
+                "document_id",
+                "documentId",
+                "DocumentId");
+            if (identifier is null ||
+                !documentCatalog.TryGetByIdentifier(identifier, out CatalogDocument document) ||
+                !seenIds.Add(document.Id))
+            {
+                continue;
+            }
+
+            matches.Add(new DocumentSearchMatch(document.Id, document.Title));
+            if (matches.Count == maxResults)
+            {
+                break;
+            }
+        }
+
+        return matches;
+    }
+
     private static string? GetString(Dictionary<string, object?> record, params string[] keys)
     {
         foreach (string key in keys)
@@ -164,3 +213,5 @@ public sealed class DocumentSearchService(
         _vectorStore?.Dispose();
     }
 }
+
+public sealed record DocumentSearchMatch(string Id, string Title);
