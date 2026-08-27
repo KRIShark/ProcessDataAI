@@ -38,7 +38,10 @@ public sealed class ChatClientFactory(
         if (settings.Provider.Equals(AiOptions.OllamaProvider, StringComparison.OrdinalIgnoreCase))
         {
             logger.LogInformation("Using Ollama chat model {Model}", settings.Ollama.ChatModel);
-            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(settings.Ollama.Endpoint) };
+            var clientOptions = new OpenAIClientOptions
+            {
+                Endpoint = OpenAiCompatibleEndpoint.EnsureV1Path(settings.Ollama.Endpoint)
+            };
             var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
             return ollamaClient.GetChatClient(settings.Ollama.ChatModel).AsIChatClient();
         }
