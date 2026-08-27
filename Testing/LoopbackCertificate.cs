@@ -4,8 +4,15 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace ProcessDataAI.Testing;
 
+/// <summary>
+/// Creates short-lived TLS certificates for loopback smoke tests.
+/// </summary>
 internal static class LoopbackCertificate
 {
+    /// <summary>
+    /// Creates a self-signed server certificate valid for localhost and loopback IP addresses.
+    /// </summary>
+    /// <returns>An exportable certificate with its private key.</returns>
     public static X509Certificate2 Create()
     {
         using RSA rsa = RSA.Create(2048);

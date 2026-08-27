@@ -6,8 +6,19 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace ProcessDataAI.Ingestion;
 
+/// <summary>
+/// Reads PDF text and supported embedded images into an ingestion document.
+/// </summary>
 public sealed class PdfPigDocumentReader(ILogger<PdfPigDocumentReader> logger) : IngestionDocumentReader
 {
+    /// <summary>
+    /// Extracts page text and supported images from a PDF stream.
+    /// </summary>
+    /// <param name="source">The PDF content stream.</param>
+    /// <param name="identifier">The identifier assigned to the resulting document.</param>
+    /// <param name="mediaType">The source media type, when known.</param>
+    /// <param name="cancellationToken">A token used to cancel extraction.</param>
+    /// <returns>The extracted ingestion document.</returns>
     public override Task<IngestionDocument> ReadAsync(
         Stream source,
         string identifier,

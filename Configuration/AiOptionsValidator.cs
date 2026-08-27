@@ -2,8 +2,17 @@ using Microsoft.Extensions.Options;
 
 namespace ProcessDataAI.Configuration;
 
+/// <summary>
+/// Validates that the selected AI provider has the endpoint, credentials, and models it requires.
+/// </summary>
 public sealed class AiOptionsValidator : IValidateOptions<AiOptions>
 {
+    /// <summary>
+    /// Validates the configured AI provider settings.
+    /// </summary>
+    /// <param name="name">The options instance name.</param>
+    /// <param name="options">The configured AI options.</param>
+    /// <returns>A successful result or a description of the invalid configuration.</returns>
     public ValidateOptionsResult Validate(string? name, AiOptions options)
     {
         if (options.Provider.Equals(AiOptions.AzureProvider, StringComparison.OrdinalIgnoreCase))

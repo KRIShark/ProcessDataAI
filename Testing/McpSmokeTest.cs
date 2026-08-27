@@ -5,8 +5,17 @@ using ModelContextProtocol.Protocol;
 
 namespace ProcessDataAI.Testing;
 
+/// <summary>
+/// Provides end-to-end validation of the local HTTPS MCP server.
+/// </summary>
 internal static class McpSmokeTest
 {
+    /// <summary>
+    /// Verifies that the server is reachable through its HTTPS health endpoint.
+    /// </summary>
+    /// <param name="serverBaseAddress">The HTTPS base address of the test server.</param>
+    /// <param name="cancellationToken">A token used to cancel the check.</param>
+    /// <returns>A task that completes when the health endpoint is ready.</returns>
     public static async Task AssertHttpsAsync(
         Uri serverBaseAddress,
         CancellationToken cancellationToken)
@@ -21,6 +30,12 @@ internal static class McpSmokeTest
         }
     }
 
+    /// <summary>
+    /// Verifies the Streamable HTTP MCP tools, their response schema, document access, and disabled legacy SSE route.
+    /// </summary>
+    /// <param name="serverBaseAddress">The HTTPS base address of the test server.</param>
+    /// <param name="cancellationToken">A token used to cancel the smoke test.</param>
+    /// <returns>A task that completes when all assertions pass.</returns>
     public static async Task RunAsync(Uri serverBaseAddress, CancellationToken cancellationToken)
     {
         using HttpClient httpClient = CreateLoopbackClient();

@@ -9,10 +9,17 @@ using System.ClientModel;
 
 namespace ProcessDataAI.Services;
 
+/// <summary>
+/// Creates embedding generators for the configured AI provider.
+/// </summary>
 public sealed class EmbeddingGeneratorFactory(
     IOptions<AiOptions> options,
     ILogger<EmbeddingGeneratorFactory> logger)
 {
+    /// <summary>
+    /// Creates an embedding generator configured for Azure OpenAI, an OpenAI-compatible API, or Ollama.
+    /// </summary>
+    /// <returns>The configured embedding generator.</returns>
     public IEmbeddingGenerator<string, Embedding<float>> Create()
     {
         AiOptions settings = options.Value;

@@ -10,6 +10,9 @@ using ProcessDataAI.Ingestion;
 
 namespace ProcessDataAI.Services;
 
+/// <summary>
+/// Ingests PDF files into an in-memory vector store and performs semantic document searches.
+/// </summary>
 public sealed class DocumentSearchService(
     PdfPigDocumentReader reader,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
@@ -23,6 +26,12 @@ public sealed class DocumentSearchService(
     private IngestionPipeline<string>? _pipeline;
     private bool _isIngested;
 
+    /// <summary>
+    /// Ingests all top-level PDF files in a directory and makes them available for semantic search.
+    /// </summary>
+    /// <param name="dataDirectory">The directory containing PDF files.</param>
+    /// <param name="cancellationToken">A token used to cancel ingestion.</param>
+    /// <returns>A task that completes after ingestion.</returns>
     public async Task IngestAsync(string dataDirectory, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(dataDirectory))
@@ -121,6 +130,12 @@ public sealed class DocumentSearchService(
             stopwatch.ElapsedMilliseconds);
     }
 
+    /// <summary>
+    /// Executes a semantic search and writes the highest-scoring chunks to the console.
+    /// </summary>
+    /// <param name="query">The query to search for.</param>
+    /// <param name="cancellationToken">A token used to cancel the search.</param>
+    /// <returns>A task that completes after results have been written.</returns>
     public async Task SearchAsync(string query, CancellationToken cancellationToken)
     {
         if (!_isIngested || _writer is null)
@@ -149,6 +164,13 @@ public sealed class DocumentSearchService(
         }
     }
 
+    /// <summary>
+    /// Searches indexed chunks and returns distinct matching documents, capped at the requested count.
+    /// </summary>
+    /// <param name="query">The query to search for.</param>
+    /// <param name="maxResults">The maximum number of distinct documents to return.</param>
+    /// <param name="cancellationToken">A token used to cancel the search.</param>
+    /// <returns>Matching documents with stable IDs and titles.</returns>
     public async Task<IReadOnlyList<DocumentSearchMatch>> SearchDocumentsAsync(
         string query,
         int maxResults,
@@ -207,6 +229,9 @@ public sealed class DocumentSearchService(
         return null;
     }
 
+    /// <summary>
+    /// Disposes the ingestion pipeline and in-memory vector store.
+    /// </summary>
     public void Dispose()
     {
         _pipeline?.Dispose();
@@ -214,4 +239,7 @@ public sealed class DocumentSearchService(
     }
 }
 
+/// <summary>
+/// Represents a distinct document returned by semantic search.
+/// </summary>
 public sealed record DocumentSearchMatch(string Id, string Title);

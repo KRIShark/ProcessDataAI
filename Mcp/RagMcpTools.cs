@@ -9,6 +9,9 @@ using ProcessDataAI.Services;
 namespace ProcessDataAI.Mcp;
 
 [McpServerToolType]
+/// <summary>
+/// Exposes semantic document search and full-document retrieval through MCP.
+/// </summary>
 public sealed class RagMcpTools(
     DocumentSearchService searchService,
     DocumentCatalog catalog,
@@ -23,6 +26,12 @@ public sealed class RagMcpTools(
         OpenWorld = false,
         UseStructuredContent = true)]
     [Description("Search the indexed PDF documents using semantic similarity. Returns stable document IDs, filenames, and citation URLs. Use fetch with an ID to retrieve the complete document text.")]
+    /// <summary>
+    /// Searches indexed documents and returns stable IDs with citation metadata.
+    /// </summary>
+    /// <param name="query">The natural-language query to search for.</param>
+    /// <param name="cancellationToken">A token used to cancel the search.</param>
+    /// <returns>The matching document IDs, titles, and HTTPS URLs.</returns>
     public async Task<SearchToolOutput> SearchAsync(
         [Description("Natural-language query used to find relevant documents.")] string query,
         CancellationToken cancellationToken)
@@ -59,6 +68,11 @@ public sealed class RagMcpTools(
         OpenWorld = false,
         UseStructuredContent = true)]
     [Description("Fetch the complete extracted text and metadata for one indexed PDF using the stable document ID returned by search.")]
+    /// <summary>
+    /// Retrieves the complete extracted content for an indexed document.
+    /// </summary>
+    /// <param name="id">The stable document ID returned by <see cref="SearchAsync"/>.</param>
+    /// <returns>The complete document content and citation metadata.</returns>
     public FetchToolOutput Fetch(
         [Description("Stable document ID returned by the search tool.")] string id)
     {
@@ -92,14 +106,23 @@ public sealed class RagMcpTools(
     }
 }
 
+/// <summary>
+/// Represents the OpenAI-compatible response returned by the MCP <c>search</c> tool.
+/// </summary>
 public sealed record SearchToolOutput(
     [property: JsonPropertyName("results")] IReadOnlyList<SearchResultItem> Results);
 
+/// <summary>
+/// Represents one searchable document and its HTTPS citation link.
+/// </summary>
 public sealed record SearchResultItem(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("url")] string Url);
 
+/// <summary>
+/// Represents the OpenAI-compatible response returned by the MCP <c>fetch</c> tool.
+/// </summary>
 public sealed record FetchToolOutput(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("title")] string Title,

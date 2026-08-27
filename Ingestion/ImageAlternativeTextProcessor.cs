@@ -13,6 +13,12 @@ public sealed class ImageAlternativeTextProcessor(
     IChatClient chatClient,
     ILogger<ImageAlternativeTextProcessor> logger) : IngestionDocumentProcessor
 {
+    /// <summary>
+    /// Generates best-effort alternative text for each supported image in a document.
+    /// </summary>
+    /// <param name="document">The document whose images are enriched.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>The enriched document.</returns>
     public override async Task<IngestionDocument> ProcessAsync(
         IngestionDocument document,
         CancellationToken cancellationToken = default)

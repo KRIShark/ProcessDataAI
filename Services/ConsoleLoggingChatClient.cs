@@ -10,6 +10,13 @@ namespace ProcessDataAI.Services;
 public sealed class ConsoleLoggingChatClient(IChatClient innerClient, ILogger<ConsoleLoggingChatClient> logger)
     : DelegatingChatClient(innerClient)
 {
+    /// <summary>
+    /// Logs request metadata and response text before returning the underlying client's response.
+    /// </summary>
+    /// <param name="messages">The messages sent to the chat model.</param>
+    /// <param name="options">Optional chat request options.</param>
+    /// <param name="cancellationToken">A token used to cancel the request.</param>
+    /// <returns>The chat model response.</returns>
     public override async Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,

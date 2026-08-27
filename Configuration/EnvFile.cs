@@ -1,7 +1,17 @@
 namespace ProcessDataAI.Configuration;
 
+/// <summary>
+/// Loads simple <c>KEY=VALUE</c> configuration files.
+/// </summary>
 public static class EnvFile
 {
+    /// <summary>
+    /// Reads configuration entries from an environment file.
+    /// </summary>
+    /// <param name="path">The path to the environment file.</param>
+    /// <returns>The parsed settings, keyed without regard to case.</returns>
+    /// <exception cref="FileNotFoundException">Thrown when <paramref name="path"/> does not exist.</exception>
+    /// <exception cref="FormatException">Thrown when an entry is not in <c>KEY=VALUE</c> form.</exception>
     public static IReadOnlyDictionary<string, string?> Load(string path)
     {
         if (!File.Exists(path))

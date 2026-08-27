@@ -9,10 +9,17 @@ using System.ClientModel;
 
 namespace ProcessDataAI.Services;
 
+/// <summary>
+/// Creates chat clients for the configured AI provider.
+/// </summary>
 public sealed class ChatClientFactory(
     IOptions<AiOptions> options,
     ILogger<ChatClientFactory> logger)
 {
+    /// <summary>
+    /// Creates a chat client configured for Azure OpenAI, an OpenAI-compatible API, or Ollama.
+    /// </summary>
+    /// <returns>The configured chat client.</returns>
     public IChatClient Create()
     {
         AiOptions settings = options.Value;
