@@ -74,12 +74,10 @@ public sealed class DocumentSearchService(
         };
         IngestionChunker<string> chunker = new SemanticSimilarityChunker(embeddingGenerator, chunkerOptions);
 
-        var enricherOptions = new EnricherOptions(chatClient)
-        {
-            LoggerFactory = loggerFactory,
-        };
         IngestionDocumentProcessor imageAlternativeTextEnricher =
-            new ImageAlternativeTextEnricher(enricherOptions);
+            new ImageAlternativeTextProcessor(
+                chatClient,
+                loggerFactory.CreateLogger<ImageAlternativeTextProcessor>());
 
         _pipeline = new IngestionPipeline<string>(
             reader,

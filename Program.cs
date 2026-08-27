@@ -60,7 +60,14 @@ static async Task<int> RunAsync(string[] args)
         await host.StartAsync();
 
         var searchService = host.Services.GetRequiredService<DocumentSearchService>();
-        await searchService.IngestAsync(Path.Combine(contentRoot, "Data"), CancellationToken.None);
+        string configuredDataDirectory = builder.Configuration["DATA_DIRECTORY"] ?? "Data";
+        if (string.IsNullOrWhiteSpace(configuredDataDirectory))
+        {
+            configuredDataDirectory = "Data";
+        }
+
+        string dataDirectory = Path.GetFullPath(configuredDataDirectory, contentRoot);
+        await searchService.IngestAsync(dataDirectory, CancellationToken.None);
 
         string? oneShotQuery = GetQueryArgument(args);
         if (!string.IsNullOrWhiteSpace(oneShotQuery))

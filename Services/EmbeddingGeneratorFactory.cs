@@ -40,7 +40,10 @@ public sealed class EmbeddingGeneratorFactory(
         if (settings.Provider.Equals(AiOptions.OllamaProvider, StringComparison.OrdinalIgnoreCase))
         {
             OllamaOptions ollama = settings.Ollama;
-            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(ollama.Endpoint) };
+            var clientOptions = new OpenAIClientOptions
+            {
+                Endpoint = OpenAiCompatibleEndpoint.EnsureV1Path(ollama.Endpoint)
+            };
             var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
             return ollamaClient.GetEmbeddingClient(ollama.EmbeddingModel).AsIEmbeddingGenerator();
         }
