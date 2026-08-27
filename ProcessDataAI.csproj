@@ -23,9 +23,6 @@
     <None Update=".env">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Data\EmployeeHandbook.pdf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="Data\ProcessDataAI-POC-Developer-Handout.pdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
