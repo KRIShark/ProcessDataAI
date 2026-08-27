@@ -15,6 +15,7 @@ MCP_URL=https://localhost:7443
 MCP_PUBLIC_BASE_URL=https://localhost:7443
 MCP_ALLOWED_HOSTS=localhost;127.0.0.1;[::1]
 MCP_ALLOW_HTTP=false
+MCP_AUTH_TOKEN=
 ```
 
 - `MCP_URL` is the origin Kestrel listens on. Paths are not allowed; the MCP route is always `/mcp`.
@@ -28,7 +29,7 @@ Kestrel needs an HTTPS certificate. For local development, create and trust the 
 dotnet dev-certs https --trust
 ```
 
-For production, configure a real certificate through the standard ASP.NET Core Kestrel certificate settings or terminate TLS at a trusted reverse proxy. The MCP endpoint currently has no authentication, so do not expose private documents publicly without adding authentication and authorization.
+For production, configure a real certificate through the standard ASP.NET Core Kestrel certificate settings or terminate TLS at a trusted reverse proxy. When `MCP_URL` or `MCP_PUBLIC_BASE_URL` is not loopback, the application requires `MCP_AUTH_TOKEN` and protects `/mcp` and `/documents/*` with a Bearer token. Keep the token in deployment-managed secret storage; never commit it.
 
 For local HTTP development, which avoids development-certificate issues in tools such as MCP Inspector, use:
 
@@ -91,4 +92,4 @@ The smoke test starts the configured HTTP or HTTPS server, ingests the configure
 
 The application reads every top-level `*.pdf`, extracts text plus embedded PNG and JPEG images with PdfPig (without OCR), generates image alternative text one image at a time, chunks content with `SemanticSimilarityChunker`, creates embeddings, and stores chunks in `InMemoryVectorStore`. Generated descriptions are included in fetched document text as `Image on page N: <description>`. Image enrichment is best-effort, so a failure to describe an image does not prevent the remaining document text from being ingested.
 
-During ingestion, the console logs AI requests and responses used for image enrichment. Binary image bytes are not printed; logs show their MIME type and byte count. Prompts and model responses can contain document data, so use this POC logging only in a trusted environment.
+During ingestion, the console logs only AI request/response metadata such as content counts, media types, byte counts, model ID, and text lengths. Prompts, model responses, image bytes, and document contents are not written to logs. One-shot console search intentionally prints retrieved content to the terminal; treat captured terminal output as sensitive.

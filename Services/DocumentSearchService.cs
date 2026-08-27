@@ -52,7 +52,7 @@ public sealed class DocumentSearchService(
 
         await documentCatalog.RegisterSourcesAsync(pdfs, cancellationToken);
 
-        logger.LogInformation("Discovered {PdfCount} PDF file(s) in {DataDirectory}", pdfs.Length, dataDirectory);
+        logger.LogInformation("Discovered {PdfCount} PDF file(s) in the configured data directory", pdfs.Length);
         logger.LogInformation("Generating an embedding to determine the provider vector dimensions");
 
         ReadOnlyMemory<float> probe;
@@ -107,12 +107,15 @@ public sealed class DocumentSearchService(
         {
             if (!result.Succeeded)
             {
-                logger.LogError(result.Exception, "Failed to ingest PDF {DocumentName}", result.DocumentId);
+                logger.LogError(
+                    "Failed to ingest PDF {DocumentName}; error type: {ErrorType}",
+                    Path.GetFileName(result.DocumentId),
+                    result.Exception?.GetType().Name ?? "unknown");
                 continue;
             }
 
             successfulDocuments++;
-            logger.LogInformation("Ingested PDF {DocumentName}", result.DocumentId);
+            logger.LogInformation("Ingested PDF {DocumentName}", Path.GetFileName(result.DocumentId));
         }
 
         stopwatch.Stop();
@@ -143,7 +146,7 @@ public sealed class DocumentSearchService(
             throw new InvalidOperationException("Documents must be ingested before searching.");
         }
 
-        logger.LogInformation("Executing semantic search for: {Query}", query);
+        logger.LogInformation("Executing semantic search for a query of {QueryCharacterCount} character(s)", query.Length);
         try
         {
             await foreach (VectorSearchResult<Dictionary<string, object?>> result in

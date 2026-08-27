@@ -1,5 +1,27 @@
+# Local configuration and secrets
 .env
+.env.*
+!.env.example
+
+# Build and IDE output
 bin/
 obj/
-/.vs
-/Data
+/.vs/
+*.user
+*.suo
+
+# Local data and generated artifacts
+/Data/
+/Documentation/*.docx
+
+# Credentials, local databases, and logs
+*.pfx
+*.p12
+*.pem
+*.key
+*.cer
+*.crt
+*.db
+*.sqlite
+*.sqlite3
+*.log

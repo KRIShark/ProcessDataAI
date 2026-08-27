@@ -4,14 +4,13 @@ using Microsoft.Extensions.Logging;
 namespace ProcessDataAI.Services;
 
 /// <summary>
-/// Logs the semantic request sent to an AI model without exposing binary image data.
-/// Intended for POC troubleshooting only: prompts and model output can contain document data.
+/// Logs AI request/response metadata without exposing prompts, model output, or binary content.
 /// </summary>
 public sealed class ConsoleLoggingChatClient(IChatClient innerClient, ILogger<ConsoleLoggingChatClient> logger)
     : DelegatingChatClient(innerClient)
 {
     /// <summary>
-    /// Logs request metadata and response text before returning the underlying client's response.
+    /// Logs request metadata without logging document text or model output.
     /// </summary>
     /// <param name="messages">The messages sent to the chat model.</param>
     /// <param name="options">Optional chat request options.</param>
@@ -27,7 +26,11 @@ public sealed class ConsoleLoggingChatClient(IChatClient innerClient, ILogger<Co
 
         foreach (ChatMessage message in requestMessages)
         {
-            logger.LogInformation("AI request role: {Role}; text: {Text}", message.Role, message.Text);
+            logger.LogInformation(
+                "AI request role: {Role}; content items: {ContentCount}; text characters: {TextCharacterCount}",
+                message.Role,
+                message.Contents.Count,
+                message.Text.Length);
             foreach (AIContent content in message.Contents)
             {
                 if (content is DataContent dataContent)
@@ -46,7 +49,10 @@ public sealed class ConsoleLoggingChatClient(IChatClient innerClient, ILogger<Co
         }
 
         ChatResponse response = await base.GetResponseAsync(requestMessages, options, cancellationToken);
-        logger.LogInformation("AI response from {ModelId}: {Text}", response.ModelId ?? "unknown", response.Text);
+        logger.LogInformation(
+            "AI response from {ModelId}; text characters: {TextCharacterCount}",
+            response.ModelId ?? "unknown",
+            response.Text.Length);
         return response;
     }
 }

@@ -23,6 +23,7 @@ public sealed class ImageAlternativeTextProcessor(
         IngestionDocument document,
         CancellationToken cancellationToken = default)
     {
+        string documentName = Path.GetFileName(document.Identifier);
         foreach (IngestionDocumentSection section in document.Sections)
         {
             foreach (IngestionDocumentImage image in section.Elements.OfType<IngestionDocumentImage>())
@@ -34,7 +35,7 @@ public sealed class ImageAlternativeTextProcessor(
                 {
                     logger.LogWarning(
                         "Skipped an image without binary content or a media type in {DocumentId}",
-                        document.Identifier);
+                        documentName);
                     continue;
                 }
 
@@ -62,7 +63,7 @@ public sealed class ImageAlternativeTextProcessor(
                     {
                         logger.LogWarning(
                             "The image model returned no alternative text for an image in {DocumentId}",
-                            document.Identifier);
+                            documentName);
                         continue;
                     }
 
@@ -73,9 +74,9 @@ public sealed class ImageAlternativeTextProcessor(
                     // Image enrichment is best-effort and should not prevent the
                     // remaining document text from being ingested.
                     logger.LogWarning(
-                        exception,
-                        "Could not generate alternative text for an image in {DocumentId}",
-                        document.Identifier);
+                        "Could not generate alternative text for an image in {DocumentId}; error type: {ErrorType}",
+                        documentName,
+                        exception.GetType().Name);
                 }
             }
         }

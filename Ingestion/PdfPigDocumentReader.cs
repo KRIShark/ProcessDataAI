@@ -27,6 +27,7 @@ public sealed class PdfPigDocumentReader(ILogger<PdfPigDocumentReader> logger) :
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        string documentName = Path.GetFileName(identifier);
 
         try
         {
@@ -55,7 +56,7 @@ public sealed class PdfPigDocumentReader(ILogger<PdfPigDocumentReader> logger) :
                         logger.LogWarning(
                             "Skipped an unsupported image on page {PageNumber} of {DocumentName}",
                             page.Number,
-                            identifier);
+                            documentName);
                         continue;
                     }
 
@@ -79,27 +80,27 @@ public sealed class PdfPigDocumentReader(ILogger<PdfPigDocumentReader> logger) :
             if (document.Sections.Count == 0)
             {
                 throw new InvalidDataException(
-                    $"PDF '{identifier}' contains no extractable text or supported images. Scanned text requires OCR, which this sample intentionally does not use.");
+                    $"PDF '{documentName}' contains no extractable text or supported images. Scanned text requires OCR, which this sample intentionally does not use.");
             }
 
             logger.LogInformation(
                 "Extracted content from {PageCount} page(s) and {ImageCount} image(s) in {DocumentName}",
                 document.Sections.Count,
                 extractedImageCount,
-                identifier);
+                documentName);
             if (unsupportedImageCount > 0)
             {
                 logger.LogWarning(
                     "Skipped {ImageCount} unsupported image(s) in {DocumentName}",
                     unsupportedImageCount,
-                    identifier);
+                    documentName);
             }
 
             return Task.FromResult(document);
         }
         catch (Exception exception) when (exception is not OperationCanceledException and not InvalidDataException)
         {
-            throw new InvalidDataException($"Could not read PDF '{identifier}': {exception.Message}", exception);
+            throw new InvalidDataException($"Could not read PDF '{documentName}'. The file could not be read.", exception);
         }
     }
 

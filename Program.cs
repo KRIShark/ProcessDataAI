@@ -14,7 +14,10 @@ using ProcessDataAI.Ingestion;
 using ProcessDataAI.Mcp;
 using ProcessDataAI.Services;
 using ProcessDataAI.Testing;
+using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 return await RunAsync(args);
 
@@ -65,6 +68,13 @@ static async Task<int> RunAsync(string[] args)
             builder.Configuration["MCP_PUBLIC_BASE_URL"],
             mcpServerUri,
             allowHttp);
+        string? authToken = builder.Configuration["MCP_AUTH_TOKEN"];
+        bool requireAuthentication = RequiresAuthentication(mcpServerUri, publicBaseUri);
+        if (requireAuthentication && string.IsNullOrWhiteSpace(authToken))
+        {
+            throw new InvalidOperationException(
+                "MCP_AUTH_TOKEN is required when MCP_URL or MCP_PUBLIC_BASE_URL is not loopback.");
+        }
 
         builder.Services
             .AddOptions<AiOptions>()
@@ -111,6 +121,21 @@ static async Task<int> RunAsync(string[] args)
             .WithTools<RagMcpTools>();
 
         await using WebApplication app = builder.Build();
+        app.Use(async (context, next) =>
+        {
+            bool protectsDocumentData =
+                context.Request.Path.StartsWithSegments("/mcp") ||
+                context.Request.Path.StartsWithSegments("/documents");
+            if (requireAuthentication && protectsDocumentData &&
+                !HasValidBearerToken(context.Request, authToken!))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.Headers.WWWAuthenticate = "Bearer";
+                return;
+            }
+
+            await next();
+        });
         app.MapMcp("/mcp");
         app.MapGet("/health", () => Results.Ok(new { status = "ready" }));
         app.MapGet("/documents/{id}", (string id, DocumentCatalog catalog) =>
@@ -236,6 +261,34 @@ static Uri GetPublicBaseUri(string? configuredUrl, Uri mcpServerUri, bool allowH
 static bool IsAllowedMcpScheme(Uri uri, bool allowHttp) =>
     uri.Scheme == Uri.UriSchemeHttps ||
     (allowHttp && uri.Scheme == Uri.UriSchemeHttp);
+
+static bool RequiresAuthentication(Uri serverUri, Uri publicBaseUri) =>
+    !IsLoopbackHost(serverUri.Host) || !IsLoopbackHost(publicBaseUri.Host);
+
+static bool IsLoopbackHost(string host)
+{
+    if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    return IPAddress.TryParse(host.Trim('[', ']'), out IPAddress? address) &&
+        IPAddress.IsLoopback(address);
+}
+
+static bool HasValidBearerToken(HttpRequest request, string expectedToken)
+{
+    const string bearerPrefix = "Bearer ";
+    string authorization = request.Headers.Authorization.ToString();
+    if (!authorization.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    byte[] provided = Encoding.UTF8.GetBytes(authorization[bearerPrefix.Length..].Trim());
+    byte[] expected = Encoding.UTF8.GetBytes(expectedToken);
+    return CryptographicOperations.FixedTimeEquals(provided, expected);
+}
 
 static bool GetBooleanSetting(IConfiguration configuration, string name, bool defaultValue)
 {

@@ -251,10 +251,12 @@ def add_code(doc, code, caption=None):
 
 
 def add_file_link(doc, label, rel_path):
-    path = (ROOT / rel_path).resolve()
     p = doc.add_paragraph(style="File Reference")
     p.add_run(label + ": ").bold = True
-    add_hyperlink(p, str(path), path.as_uri(), DARK_BLUE)
+    # Keep generated documents portable and avoid embedding the maintainer's
+    # local filesystem path in the displayed text or hyperlink target.
+    repository_path = rel_path.replace("\\", "/")
+    add_hyperlink(p, repository_path, repository_path, DARK_BLUE)
     return p
 
 
@@ -339,7 +341,7 @@ def build():
         ("Developer new to the Microsoft AI ingestion stack", "Understand the design and reproduce the implementation without prior library knowledge."),
         ("POC maintainer", "Operate the application, interpret logs, diagnose ingestion failures, and identify production-hardening work."),
     ], [2600, 6760])
-    add_body(doc, "Project root: C:\\Users\\crist\\source\\repos\\MS-ProcessYourData\\ProcessDataAI")
+    add_body(doc, "Project root: the local ProcessDataAI repository")
     add_body(doc, "Document version: July 2026")
 
     page_break(doc)
@@ -478,7 +480,7 @@ AZURE_OPENAI_ENDPOINT=
 AZURE_OPENAI_API_KEY=
 AZURE_OPENAI_EMBEDDING_MODEL=
 
-OLLAMA_ENDPOINT=http://192.168.178.22:11434/v1
+OLLAMA_ENDPOINT=http://localhost:11434/v1
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text""", ".env.example")
     add_heading(doc, "Configuration lifecycle", 2)
     add_numbers(doc, [
