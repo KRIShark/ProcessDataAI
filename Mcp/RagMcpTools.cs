@@ -25,13 +25,13 @@ public sealed class RagMcpTools(
         Idempotent = true,
         OpenWorld = false,
         UseStructuredContent = true)]
-    [Description("Search the indexed PDF documents using semantic similarity. Returns stable document IDs, filenames, and citation URLs. Use fetch with an ID to retrieve the complete document text.")]
+    [Description("Find documents relevant to a text query. Returns a collection containing each resource ID and title, with an optional URL, text preview, and metadata. Use fetch with an ID to retrieve the complete resource.")]
     /// <summary>
-    /// Searches indexed documents and returns stable IDs with citation metadata.
+    /// Finds indexed documents relevant to a text query.
     /// </summary>
     /// <param name="query">The natural-language query to search for.</param>
     /// <param name="cancellationToken">A token used to cancel the search.</param>
-    /// <returns>The matching document IDs, titles, and HTTPS URLs.</returns>
+    /// <returns>Matching resources with IDs, titles, and optional URLs, previews, and metadata.</returns>
     public async Task<SearchToolOutput> SearchAsync(
         [Description("Natural-language query used to find relevant documents.")] string query,
         CancellationToken cancellationToken)
@@ -54,7 +54,9 @@ public sealed class RagMcpTools(
             .Select(match => new SearchResultItem(
                 match.Id,
                 match.Title,
-                CreateDocumentUrl(match.Id)))
+                CreateDocumentUrl(match.Id),
+                match.Text,
+                CreateMetadata(match.Title, match.MediaType, match.SizeBytes)))
             .ToArray();
         return new SearchToolOutput(results);
     }
@@ -67,9 +69,9 @@ public sealed class RagMcpTools(
         Idempotent = true,
         OpenWorld = false,
         UseStructuredContent = true)]
-    [Description("Fetch the complete extracted text and metadata for one indexed PDF using the stable document ID returned by search.")]
+    [Description("Retrieve the full textual content of a specific resource using the stable ID returned by search. Returns the required ID, title, and text, with an optional URL and metadata.")]
     /// <summary>
-    /// Retrieves the complete extracted content for an indexed document.
+    /// Retrieves the complete extracted content for a specific indexed resource.
     /// </summary>
     /// <param name="id">The stable document ID returned by <see cref="SearchAsync"/>.</param>
     /// <returns>The complete document content and citation metadata.</returns>
@@ -91,12 +93,7 @@ public sealed class RagMcpTools(
             document.Title,
             document.Text,
             CreateDocumentUrl(document.Id),
-            new Dictionary<string, object?>
-            {
-                ["file_name"] = document.Title,
-                ["media_type"] = document.MediaType,
-                ["size_bytes"] = document.SizeBytes,
-            });
+            CreateMetadata(document.Title, document.MediaType, document.SizeBytes));
     }
 
     private string CreateDocumentUrl(string id)
@@ -104,6 +101,17 @@ public sealed class RagMcpTools(
         var baseUri = new Uri(options.Value.PublicBaseUrl.TrimEnd('/') + "/", UriKind.Absolute);
         return new Uri(baseUri, $"documents/{Uri.EscapeDataString(id)}").AbsoluteUri;
     }
+
+    private static IReadOnlyDictionary<string, object?> CreateMetadata(
+        string fileName,
+        string mediaType,
+        long sizeBytes) =>
+        new Dictionary<string, object?>
+        {
+            ["file_name"] = fileName,
+            ["media_type"] = mediaType,
+            ["size_bytes"] = sizeBytes,
+        };
 }
 
 /// <summary>
@@ -113,12 +121,20 @@ public sealed record SearchToolOutput(
     [property: JsonPropertyName("results")] IReadOnlyList<SearchResultItem> Results);
 
 /// <summary>
-/// Represents one searchable document and its HTTPS citation link.
+/// Represents one resource discovered by the search tool.
 /// </summary>
 public sealed record SearchResultItem(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("title")] string Title,
-    [property: JsonPropertyName("url")] string Url);
+    [property: JsonPropertyName("url")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Url = null,
+    [property: JsonPropertyName("text")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Text = null,
+    [property: JsonPropertyName("metadata")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyDictionary<string, object?>? Metadata = null);
 
 /// <summary>
 /// Represents the OpenAI-compatible response returned by the MCP <c>fetch</c> tool.
@@ -127,5 +143,9 @@ public sealed record FetchToolOutput(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("text")] string Text,
-    [property: JsonPropertyName("url")] string Url,
-    [property: JsonPropertyName("metadata")] IReadOnlyDictionary<string, object?> Metadata);
+    [property: JsonPropertyName("url")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Url = null,
+    [property: JsonPropertyName("metadata")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyDictionary<string, object?>? Metadata = null);

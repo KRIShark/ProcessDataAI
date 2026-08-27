@@ -5,6 +5,6 @@ namespace ProcessDataAI.Configuration;
 /// </summary>
 public sealed class RagMcpOptions
 {
-    /// <summary>Gets or sets the HTTPS base URL used for document citation links.</summary>
+    /// <summary>Gets or sets the HTTP or HTTPS base URL used for document citation links.</summary>
     public string PublicBaseUrl { get; set; } = string.Empty;
 }

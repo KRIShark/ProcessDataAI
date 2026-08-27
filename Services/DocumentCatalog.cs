@@ -63,10 +63,24 @@ public sealed class DocumentCatalog
             $"{Environment.NewLine}{Environment.NewLine}",
             document.Sections
                 .SelectMany(section => section.Elements)
-                .Select(element => element.GetMarkdown())
+                .Select(GetCatalogText)
                 .Where(markdown => !string.IsNullOrWhiteSpace(markdown)));
 
         _documents[id] = registeredDocument with { Text = text };
+    }
+
+    private static string GetCatalogText(IngestionDocumentElement element)
+    {
+        if (element is IngestionDocumentImage image &&
+            !string.IsNullOrWhiteSpace(image.AlternativeText))
+        {
+            string location = image.PageNumber is int pageNumber
+                ? $" on page {pageNumber}"
+                : string.Empty;
+            return $"Image{location}: {image.AlternativeText.Trim()}";
+        }
+
+        return element.GetMarkdown();
     }
 
     /// <summary>

@@ -170,7 +170,7 @@ public sealed class DocumentSearchService(
     /// <param name="query">The query to search for.</param>
     /// <param name="maxResults">The maximum number of distinct documents to return.</param>
     /// <param name="cancellationToken">A token used to cancel the search.</param>
-    /// <returns>Matching documents with stable IDs and titles.</returns>
+    /// <returns>Matching documents with stable IDs, titles, previews, and source metadata.</returns>
     public async Task<IReadOnlyList<DocumentSearchMatch>> SearchDocumentsAsync(
         string query,
         int maxResults,
@@ -206,7 +206,13 @@ public sealed class DocumentSearchService(
                 continue;
             }
 
-            matches.Add(new DocumentSearchMatch(document.Id, document.Title));
+            string? content = GetString(result.Record, "content", "Content");
+            matches.Add(new DocumentSearchMatch(
+                document.Id,
+                document.Title,
+                CreateSnippet(content),
+                document.SizeBytes,
+                document.MediaType));
             if (matches.Count == maxResults)
             {
                 break;
@@ -214,6 +220,20 @@ public sealed class DocumentSearchService(
         }
 
         return matches;
+    }
+
+    private static string? CreateSnippet(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        const int maxLength = 500;
+        string snippet = content.ReplaceLineEndings(" ").Trim();
+        return snippet.Length <= maxLength
+            ? snippet
+            : $"{snippet[..(maxLength - 3)]}...";
     }
 
     private static string? GetString(Dictionary<string, object?> record, params string[] keys)
@@ -240,6 +260,11 @@ public sealed class DocumentSearchService(
 }
 
 /// <summary>
-/// Represents a distinct document returned by semantic search.
+/// Represents a distinct document and preview returned by semantic search.
 /// </summary>
-public sealed record DocumentSearchMatch(string Id, string Title);
+public sealed record DocumentSearchMatch(
+    string Id,
+    string Title,
+    string? Text,
+    long SizeBytes,
+    string MediaType);

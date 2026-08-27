@@ -26,7 +26,10 @@ static async Task<int> RunAsync(string[] args)
         IReadOnlyDictionary<string, string?> envValues = EnvFile.Load(Path.Combine(contentRoot, ".env"));
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-        builder.Configuration.AddInMemoryCollection(envValues);
+        builder.Configuration
+            .AddInMemoryCollection(envValues)
+            .AddEnvironmentVariables()
+            .AddCommandLine(args);
         builder.Logging.ClearProviders();
         builder.Logging.AddSimpleConsole(options =>
         {
@@ -34,13 +37,15 @@ static async Task<int> RunAsync(string[] args)
             options.TimestampFormat = "HH:mm:ss ";
         });
 
-        Uri mcpServerUri = GetHttpsServerUri(builder.Configuration["MCP_URL"]);
+        bool allowHttp = GetBooleanSetting(builder.Configuration, "MCP_ALLOW_HTTP", defaultValue: false);
+        Uri mcpServerUri = GetServerUri(builder.Configuration["MCP_URL"], allowHttp);
         bool runSmokeTest = HasArgument(args, "--mcp-smoke-test");
         if (runSmokeTest)
         {
             builder.Logging.AddFilter("Microsoft.AspNetCore.Server.Kestrel", LogLevel.Debug);
         }
-        using X509Certificate2? smokeTestCertificate = runSmokeTest
+        using X509Certificate2? smokeTestCertificate = runSmokeTest &&
+            mcpServerUri.Scheme == Uri.UriSchemeHttps
             ? LoopbackCertificate.Create()
             : null;
         if (smokeTestCertificate is null)
@@ -56,9 +61,10 @@ static async Task<int> RunAsync(string[] args)
         }
         builder.Configuration["AllowedHosts"] =
             builder.Configuration["MCP_ALLOWED_HOSTS"] ?? "localhost;127.0.0.1;[::1]";
-        Uri publicBaseUri = GetHttpsPublicBaseUri(
+        Uri publicBaseUri = GetPublicBaseUri(
             builder.Configuration["MCP_PUBLIC_BASE_URL"],
-            mcpServerUri);
+            mcpServerUri,
+            allowHttp);
 
         builder.Services
             .AddOptions<AiOptions>()
@@ -126,11 +132,20 @@ static async Task<int> RunAsync(string[] args)
             await app.StartAsync();
             try
             {
-                await McpSmokeTest.AssertHttpsAsync(
+                await McpSmokeTest.AssertServerAsync(
                     GetServerBaseUri(mcpServerUri),
                     CancellationToken.None);
                 await searchService.IngestAsync(dataDirectory, CancellationToken.None);
-                await McpSmokeTest.RunAsync(GetServerBaseUri(mcpServerUri), CancellationToken.None);
+                string imageDocumentPath = Path.Combine(dataDirectory, "stormworks.pdf");
+                var catalog = app.Services.GetRequiredService<DocumentCatalog>();
+                string? imageDocumentId = File.Exists(imageDocumentPath) &&
+                    catalog.TryGetByIdentifier(imageDocumentPath, out CatalogDocument imageDocument)
+                        ? imageDocument.Id
+                        : null;
+                await McpSmokeTest.RunAsync(
+                    GetServerBaseUri(mcpServerUri),
+                    imageDocumentId,
+                    CancellationToken.None);
                 return 0;
             }
             finally
@@ -166,19 +181,21 @@ static async Task<int> RunAsync(string[] args)
 static bool HasArgument(string[] args, string name) =>
     args.Any(argument => argument.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-static Uri GetHttpsServerUri(string? configuredUrl)
+static Uri GetServerUri(string? configuredUrl, bool allowHttp)
 {
     string value = string.IsNullOrWhiteSpace(configuredUrl)
         ? "https://localhost:7443"
         : configuredUrl;
     if (!Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) ||
-        uri.Scheme != Uri.UriSchemeHttps ||
+        !IsAllowedMcpScheme(uri, allowHttp) ||
         uri.AbsolutePath != "/" ||
         !string.IsNullOrEmpty(uri.Query) ||
         !string.IsNullOrEmpty(uri.Fragment))
     {
         throw new InvalidOperationException(
-            "MCP_URL must be an absolute HTTPS origin without a path, query, or fragment.");
+            allowHttp
+                ? "MCP_URL must be an absolute HTTP or HTTPS origin without a path, query, or fragment."
+                : "MCP_URL must be an absolute HTTPS origin without a path, query, or fragment. Set MCP_ALLOW_HTTP=true to permit HTTP.");
     }
 
     return uri;
@@ -195,7 +212,7 @@ static Uri GetServerBaseUri(Uri serverUri)
     return builder.Uri;
 }
 
-static Uri GetHttpsPublicBaseUri(string? configuredUrl, Uri mcpServerUri)
+static Uri GetPublicBaseUri(string? configuredUrl, Uri mcpServerUri, bool allowHttp)
 {
     if (string.IsNullOrWhiteSpace(configuredUrl))
     {
@@ -203,15 +220,37 @@ static Uri GetHttpsPublicBaseUri(string? configuredUrl, Uri mcpServerUri)
     }
 
     if (!Uri.TryCreate(configuredUrl, UriKind.Absolute, out Uri? uri) ||
-        uri.Scheme != Uri.UriSchemeHttps ||
+        !IsAllowedMcpScheme(uri, allowHttp) ||
         !string.IsNullOrEmpty(uri.Query) ||
         !string.IsNullOrEmpty(uri.Fragment))
     {
         throw new InvalidOperationException(
-            "MCP_PUBLIC_BASE_URL must be an absolute HTTPS URL without a query or fragment.");
+            allowHttp
+                ? "MCP_PUBLIC_BASE_URL must be an absolute HTTP or HTTPS URL without a query or fragment."
+                : "MCP_PUBLIC_BASE_URL must be an absolute HTTPS URL without a query or fragment. Set MCP_ALLOW_HTTP=true to permit HTTP.");
     }
 
     return uri;
+}
+
+static bool IsAllowedMcpScheme(Uri uri, bool allowHttp) =>
+    uri.Scheme == Uri.UriSchemeHttps ||
+    (allowHttp && uri.Scheme == Uri.UriSchemeHttp);
+
+static bool GetBooleanSetting(IConfiguration configuration, string name, bool defaultValue)
+{
+    string? value = configuration[name];
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return defaultValue;
+    }
+
+    if (bool.TryParse(value, out bool result))
+    {
+        return result;
+    }
+
+    throw new InvalidOperationException($"{name} must be either 'true' or 'false'.");
 }
 
 static string? GetQueryArgument(string[] args)
