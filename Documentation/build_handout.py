@@ -476,11 +476,13 @@ builder.Services.AddSingleton<DocumentSearchService>();""", "Core DI registratio
     add_body(doc, "Provider selection is data-driven. Switching between Azure and Ollama requires only an .env change; the downstream pipeline always receives the same IEmbeddingGenerator abstraction.")
     add_code(doc, """AI_PROVIDER=Azure
 
-AZURE_OPENAI_ENDPOINT=
+AZURE_OPENAI_EMBEDDING_ENDPOINT=
+AZURE_OPENAI_CHAT_ENDPOINT=
 AZURE_OPENAI_API_KEY=
 AZURE_OPENAI_EMBEDDING_MODEL=
 
-OLLAMA_ENDPOINT=http://localhost:11434/v1
+OLLAMA_EMBEDDING_ENDPOINT=http://localhost:11434/v1
+OLLAMA_CHAT_ENDPOINT=http://localhost:11434/v1
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text""", ".env.example")
     add_heading(doc, "Configuration lifecycle", 2)
     add_numbers(doc, [
@@ -501,13 +503,15 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text""", ".env.example")
     StringComparison.OrdinalIgnoreCase))
 {
     var client = new AzureOpenAIClient(
-        new Uri(azure.Endpoint),
+        new Uri(azure.EmbeddingEndpoint),
         new AzureKeyCredential(azure.ApiKey));
     return client.GetEmbeddingClient(azure.EmbeddingModel)
         .AsIEmbeddingGenerator();
 }
 
-var options = new OpenAIClientOptions { Endpoint = new Uri(ollama.Endpoint) };
+var options = new OpenAIClientOptions {
+    Endpoint = new Uri(ollama.EmbeddingEndpoint)
+};
 var client = new OpenAIClient(new ApiKeyCredential("not-required"), options);
 return client.GetEmbeddingClient(ollama.EmbeddingModel)
     .AsIEmbeddingGenerator();""", "Provider selection, shortened")

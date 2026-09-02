@@ -27,8 +27,10 @@ public sealed class AiOptions
 /// </summary>
 public sealed class AzureOpenAiOptions
 {
-    /// <summary>Gets or sets the Azure OpenAI endpoint.</summary>
-    public string Endpoint { get; set; } = string.Empty;
+    /// <summary>Gets or sets the Azure OpenAI endpoint used for embeddings.</summary>
+    public string EmbeddingEndpoint { get; set; } = string.Empty;
+    /// <summary>Gets or sets the Azure OpenAI endpoint used for chat.</summary>
+    public string ChatEndpoint { get; set; } = string.Empty;
     /// <summary>Gets or sets the Azure OpenAI API key.</summary>
     public string ApiKey { get; set; } = string.Empty;
     /// <summary>Gets or sets the embedding deployment name.</summary>
@@ -42,8 +44,10 @@ public sealed class AzureOpenAiOptions
 /// </summary>
 public sealed class OllamaOptions
 {
-    /// <summary>Gets or sets the Ollama endpoint.</summary>
-    public string Endpoint { get; set; } = string.Empty;
+    /// <summary>Gets or sets the Ollama endpoint used for embeddings.</summary>
+    public string EmbeddingEndpoint { get; set; } = string.Empty;
+    /// <summary>Gets or sets the Ollama endpoint used for chat.</summary>
+    public string ChatEndpoint { get; set; } = string.Empty;
     /// <summary>Gets or sets the embedding model name.</summary>
     public string EmbeddingModel { get; set; } = string.Empty;
     /// <summary>Gets or sets the chat model name.</summary>
@@ -55,8 +59,10 @@ public sealed class OllamaOptions
 /// </summary>
 public sealed class OpenAiOptions
 {
-    /// <summary>Gets or sets the API endpoint.</summary>
-    public string Endpoint { get; set; } = string.Empty;
+    /// <summary>Gets or sets the API endpoint used for embeddings.</summary>
+    public string EmbeddingEndpoint { get; set; } = string.Empty;
+    /// <summary>Gets or sets the API endpoint used for chat.</summary>
+    public string ChatEndpoint { get; set; } = string.Empty;
     /// <summary>Gets or sets the API key, when the endpoint requires one.</summary>
     public string ApiKey { get; set; } = string.Empty;
     /// <summary>Gets or sets the embedding model name.</summary>

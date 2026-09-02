@@ -27,7 +27,7 @@ public sealed class ChatClientFactory(
         {
             logger.LogInformation("Using Azure OpenAI chat deployment {Model}", settings.Azure.ChatModel);
             var azureClient = new AzureOpenAIClient(
-                new Uri(settings.Azure.Endpoint),
+                new Uri(settings.Azure.ChatEndpoint),
                 new AzureKeyCredential(settings.Azure.ApiKey));
             return azureClient.GetChatClient(settings.Azure.ChatModel).AsIChatClient();
         }
@@ -35,7 +35,7 @@ public sealed class ChatClientFactory(
         if (settings.Provider.Equals(AiOptions.OpenAiProvider, StringComparison.OrdinalIgnoreCase))
         {
             logger.LogInformation("Using OpenAI-compatible chat model {Model}", settings.OpenAI.ChatModel);
-            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(settings.OpenAI.Endpoint) };
+            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(settings.OpenAI.ChatEndpoint) };
             var client = new OpenAIClient(
                 new ApiKeyCredential(GetApiKey(settings.OpenAI.ApiKey)),
                 clientOptions);
@@ -47,7 +47,7 @@ public sealed class ChatClientFactory(
             logger.LogInformation("Using Ollama chat model {Model}", settings.Ollama.ChatModel);
             var clientOptions = new OpenAIClientOptions
             {
-                Endpoint = OpenAiCompatibleEndpoint.EnsureV1Path(settings.Ollama.Endpoint)
+                Endpoint = OpenAiCompatibleEndpoint.EnsureV1Path(settings.Ollama.ChatEndpoint)
             };
             var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
             return ollamaClient.GetChatClient(settings.Ollama.ChatModel).AsIChatClient();

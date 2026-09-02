@@ -29,7 +29,7 @@ public sealed class EmbeddingGeneratorFactory(
         {
             AzureOpenAiOptions azure = settings.Azure;
             var client = new AzureOpenAIClient(
-                new Uri(azure.Endpoint),
+                new Uri(azure.EmbeddingEndpoint),
                 new AzureKeyCredential(azure.ApiKey));
             return client.GetEmbeddingClient(azure.EmbeddingModel).AsIEmbeddingGenerator();
         }
@@ -37,7 +37,7 @@ public sealed class EmbeddingGeneratorFactory(
         if (settings.Provider.Equals(AiOptions.OpenAiProvider, StringComparison.OrdinalIgnoreCase))
         {
             OpenAiOptions openAI = settings.OpenAI;
-            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(openAI.Endpoint) };
+            var clientOptions = new OpenAIClientOptions { Endpoint = new Uri(openAI.EmbeddingEndpoint) };
             var client = new OpenAIClient(
                 new ApiKeyCredential(GetApiKey(openAI.ApiKey)),
                 clientOptions);
@@ -49,7 +49,7 @@ public sealed class EmbeddingGeneratorFactory(
             OllamaOptions ollama = settings.Ollama;
             var clientOptions = new OpenAIClientOptions
             {
-                Endpoint = OpenAiCompatibleEndpoint.EnsureV1Path(ollama.Endpoint)
+                Endpoint = OpenAiCompatibleEndpoint.EnsureV1Path(ollama.EmbeddingEndpoint)
             };
             var ollamaClient = new OpenAIClient(new ApiKeyCredential("not-required"), clientOptions);
             return ollamaClient.GetEmbeddingClient(ollama.EmbeddingModel).AsIEmbeddingGenerator();

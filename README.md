@@ -41,11 +41,13 @@ MCP_PUBLIC_BASE_URL=http://localhost:7443
 
 HTTP is unencrypted. Keep it on loopback or a trusted private network; use HTTPS whenever traffic can cross an untrusted network.
 
-For Azure OpenAI, model values are deployment names. Set `AZURE_OPENAI_CHAT_MODEL` to a vision-capable chat deployment.
+For Azure OpenAI, configure `AZURE_OPENAI_EMBEDDING_ENDPOINT` and `AZURE_OPENAI_CHAT_ENDPOINT`; the two endpoints may differ. Model values are deployment names. Set `AZURE_OPENAI_CHAT_MODEL` to a vision-capable chat deployment.
 
-For OpenAI or another OpenAI-compatible service, configure `OPENAI_ENDPOINT`, `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, and `OPENAI_CHAT_MODEL`. The endpoint must include the service's `/v1` API path. `OPENAI_API_KEY` may be empty for a local service that does not require authentication. The chat model must support image inputs.
+For OpenAI or another OpenAI-compatible service, configure `OPENAI_EMBEDDING_ENDPOINT`, `OPENAI_CHAT_ENDPOINT`, `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, and `OPENAI_CHAT_MODEL`. The endpoints may be different and must include each service's `/v1` API path. `OPENAI_API_KEY` may be empty for a local service that does not require authentication. The chat model must support image inputs.
 
-For Ollama, `OLLAMA_ENDPOINT` may be the server root, such as `http://localhost:11434`, or its OpenAI-compatible `/v1` URL. Both configured models must already be available. A vision-capable chat model is needed to describe embedded images; text-bearing PDFs still work with a text-only model.
+For Ollama, configure `OLLAMA_EMBEDDING_ENDPOINT` and `OLLAMA_CHAT_ENDPOINT`. Each may be a server root, such as `http://localhost:11434`, or an OpenAI-compatible `/v1` URL, and they may address different servers. Both configured models must already be available. A vision-capable chat model is needed to describe embedded images; text-bearing PDFs still work with a text-only model.
+
+For backward compatibility, the legacy `AZURE_OPENAI_ENDPOINT`, `OPENAI_ENDPOINT`, and `OLLAMA_ENDPOINT` settings remain supported as fallbacks for both corresponding endpoints. A role-specific endpoint takes precedence when it is set.
 
 ## Run the MCP server
 

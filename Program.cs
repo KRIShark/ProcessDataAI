@@ -81,15 +81,27 @@ static async Task<int> RunAsync(string[] args)
             .Configure(options =>
             {
                 options.Provider = builder.Configuration["AI_PROVIDER"] ?? string.Empty;
-                options.Azure.Endpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"] ?? string.Empty;
+                string azureEndpoint = builder.Configuration["AZURE_OPENAI_ENDPOINT"] ?? string.Empty;
+                options.Azure.EmbeddingEndpoint =
+                    builder.Configuration["AZURE_OPENAI_EMBEDDING_ENDPOINT"] ?? azureEndpoint;
+                options.Azure.ChatEndpoint =
+                    builder.Configuration["AZURE_OPENAI_CHAT_ENDPOINT"] ?? azureEndpoint;
                 options.Azure.ApiKey = builder.Configuration["AZURE_OPENAI_API_KEY"] ?? string.Empty;
                 options.Azure.EmbeddingModel = builder.Configuration["AZURE_OPENAI_EMBEDDING_MODEL"] ?? string.Empty;
                 options.Azure.ChatModel = builder.Configuration["AZURE_OPENAI_CHAT_MODEL"] ?? string.Empty;
-                options.OpenAI.Endpoint = builder.Configuration["OPENAI_ENDPOINT"] ?? string.Empty;
+                string openAiEndpoint = builder.Configuration["OPENAI_ENDPOINT"] ?? string.Empty;
+                options.OpenAI.EmbeddingEndpoint =
+                    builder.Configuration["OPENAI_EMBEDDING_ENDPOINT"] ?? openAiEndpoint;
+                options.OpenAI.ChatEndpoint =
+                    builder.Configuration["OPENAI_CHAT_ENDPOINT"] ?? openAiEndpoint;
                 options.OpenAI.ApiKey = builder.Configuration["OPENAI_API_KEY"] ?? string.Empty;
                 options.OpenAI.EmbeddingModel = builder.Configuration["OPENAI_EMBEDDING_MODEL"] ?? string.Empty;
                 options.OpenAI.ChatModel = builder.Configuration["OPENAI_CHAT_MODEL"] ?? string.Empty;
-                options.Ollama.Endpoint = builder.Configuration["OLLAMA_ENDPOINT"] ?? string.Empty;
+                string ollamaEndpoint = builder.Configuration["OLLAMA_ENDPOINT"] ?? string.Empty;
+                options.Ollama.EmbeddingEndpoint =
+                    builder.Configuration["OLLAMA_EMBEDDING_ENDPOINT"] ?? ollamaEndpoint;
+                options.Ollama.ChatEndpoint =
+                    builder.Configuration["OLLAMA_CHAT_ENDPOINT"] ?? ollamaEndpoint;
                 options.Ollama.EmbeddingModel = builder.Configuration["OLLAMA_EMBEDDING_MODEL"] ?? string.Empty;
                 options.Ollama.ChatModel = builder.Configuration["OLLAMA_CHAT_MODEL"] ?? string.Empty;
             })
