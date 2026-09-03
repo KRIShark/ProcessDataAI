@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Microsoft.Extensions.DataIngestion;
+using ProcessDataAI.Ingestion;
 
 namespace ProcessDataAI.Services;
 
@@ -15,9 +16,9 @@ public sealed class DocumentCatalog
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Registers source PDFs and assigns each one a stable ID derived from its content.
+    /// Registers source documents and assigns each one a stable ID derived from its content.
     /// </summary>
-    /// <param name="files">The PDF files that will be ingested.</param>
+    /// <param name="files">The source files that will be ingested.</param>
     /// <param name="cancellationToken">A token used to cancel registration.</param>
     /// <returns>A task that completes once every source has been registered.</returns>
     public async Task RegisterSourcesAsync(
@@ -29,6 +30,12 @@ public sealed class DocumentCatalog
 
         foreach (FileInfo file in files)
         {
+            if (!SupportedDocumentTypes.TryGetMediaType(file.Extension, out string mediaType))
+            {
+                throw new NotSupportedException(
+                    $"File type '{file.Extension}' is not supported for '{file.Name}'.");
+            }
+
             await using FileStream stream = file.OpenRead();
             byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken);
             string id = $"doc-{Convert.ToHexStringLower(hash)}";
@@ -39,7 +46,7 @@ public sealed class DocumentCatalog
                 identifier,
                 string.Empty,
                 file.Length,
-                "application/pdf");
+                mediaType);
 
             _idsByIdentifier[identifier] = id;
             _documents[id] = document;
@@ -114,7 +121,7 @@ public sealed class DocumentCatalog
 }
 
 /// <summary>
-/// Contains the identity, extracted content, and source metadata for a cataloged PDF.
+/// Contains the identity, extracted content, and source metadata for a cataloged document.
 /// </summary>
 public sealed record CatalogDocument(
     string Id,

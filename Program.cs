@@ -114,6 +114,9 @@ static async Task<int> RunAsync(string[] args)
                 options.PublicBaseUrl = publicBaseUri.AbsoluteUri;
             });
         builder.Services.AddSingleton<PdfPigDocumentReader>();
+        builder.Services.AddSingleton<TextDocumentReader>();
+        builder.Services.AddSingleton<ImageDocumentReader>();
+        builder.Services.AddSingleton<MultiFormatDocumentReader>();
         builder.Services.AddSingleton<DocumentCatalog>();
         builder.Services.AddSingleton<EmbeddingGeneratorFactory>();
         builder.Services.AddSingleton<ChatClientFactory>();

@@ -1,12 +1,12 @@
 # ProcessDataAI
 
-PDF ingestion, semantic retrieval, and an HTTP/HTTPS Model Context Protocol server built with the Microsoft AI extensions stack and the official C# MCP SDK.
+PDF, Markdown, text, and image ingestion; semantic retrieval; and an HTTP/HTTPS Model Context Protocol server built with the Microsoft AI extensions stack and the official C# MCP SDK.
 
 ## Configure
 
 Copy `.env.example` to `.env`, set `AI_PROVIDER` to `Azure`, `OpenAI`, or `Ollama`, and fill in the selected provider's settings. The unselected provider values may remain empty. `.env` is ignored by Git.
 
-`DATA_DIRECTORY` selects the directory containing PDFs. Absolute paths are used as-is; relative paths are resolved from the application content directory. It defaults to `Data` when omitted or empty.
+`DATA_DIRECTORY` selects the directory containing source files. Absolute paths are used as-is; relative paths are resolved from the application content directory. It defaults to `Data` when omitted or empty. Supported files are `.pdf`, `.md`, `.markdown`, `.txt`, `.png`, `.jpg`, `.jpeg`, `.gif`, and `.webp`.
 
 The MCP server settings are:
 
@@ -43,15 +43,15 @@ HTTP is unencrypted. Keep it on loopback or a trusted private network; use HTTPS
 
 For Azure OpenAI, configure `AZURE_OPENAI_EMBEDDING_ENDPOINT` and `AZURE_OPENAI_CHAT_ENDPOINT`; the two endpoints may differ. Model values are deployment names. Set `AZURE_OPENAI_CHAT_MODEL` to a vision-capable chat deployment.
 
-For OpenAI or another OpenAI-compatible service, configure `OPENAI_EMBEDDING_ENDPOINT`, `OPENAI_CHAT_ENDPOINT`, `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, and `OPENAI_CHAT_MODEL`. The endpoints may be different and must include each service's `/v1` API path. `OPENAI_API_KEY` may be empty for a local service that does not require authentication. The chat model must support image inputs.
+For OpenAI or another OpenAI-compatible service, configure `OPENAI_EMBEDDING_ENDPOINT`, `OPENAI_CHAT_ENDPOINT`, `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, and `OPENAI_CHAT_MODEL`. The endpoints may be different and must include each service's `/v1` API path. `OPENAI_API_KEY` may be empty for a local service that does not require authentication. A vision-capable chat model is required to ingest standalone images or describe images embedded in PDFs.
 
-For Ollama, configure `OLLAMA_EMBEDDING_ENDPOINT` and `OLLAMA_CHAT_ENDPOINT`. Each may be a server root, such as `http://localhost:11434`, or an OpenAI-compatible `/v1` URL, and they may address different servers. Both configured models must already be available. A vision-capable chat model is needed to describe embedded images; text-bearing PDFs still work with a text-only model.
+For Ollama, configure `OLLAMA_EMBEDDING_ENDPOINT` and `OLLAMA_CHAT_ENDPOINT`. Each may be a server root, such as `http://localhost:11434`, or an OpenAI-compatible `/v1` URL, and they may address different servers. Both configured models must already be available. A vision-capable chat model is required to ingest standalone images or describe images embedded in PDFs; text-only sources still work with a text-only model.
 
 For backward compatibility, the legacy `AZURE_OPENAI_ENDPOINT`, `OPENAI_ENDPOINT`, and `OLLAMA_ENDPOINT` settings remain supported as fallbacks for both corresponding endpoints. A role-specific endpoint takes precedence when it is set.
 
 ## Run the MCP server
 
-Place PDFs in `DATA_DIRECTORY`, then run:
+Place supported files in `DATA_DIRECTORY`, then run:
 
 ```powershell
 dotnet run
@@ -67,8 +67,8 @@ This is the current Streamable HTTP transport. Legacy SSE routes such as `/mcp/s
 
 The server exposes two read-only tools compatible with OpenAI search/fetch integrations:
 
-- `search(query)` performs dense semantic vector retrieval and returns `results`. Every result contains a stable document `id` and the PDF filename as `title`; it may also contain a citation `url`, a short relevant `text` preview, and `metadata`.
-- `fetch(id)` retrieves the required `id`, filename `title`, and complete extracted document `text`. A citation `url` and source `metadata` are optional. The ID is a stable `doc-` prefixed SHA-256 hash of the PDF bytes.
+- `search(query)` performs dense semantic vector retrieval and returns `results`. Every result contains a stable document `id` and source filename as `title`; it may also contain a citation `url`, a short relevant `text` preview, and `metadata`.
+- `fetch(id)` retrieves the required `id`, filename `title`, and complete extracted document `text`. A citation `url` and source `metadata` are optional. The ID is a stable `doc-` prefixed SHA-256 hash of the source file bytes.
 
 Both tools advertise output schemas and return the result in MCP `structuredContent` plus JSON compatibility text. Search results are deduplicated by document. Retrieval is dense vector search with cosine similarity; it is not keyword or hybrid retrieval.
 
@@ -88,10 +88,12 @@ With a configured `.env`, run:
 dotnet run -- --mcp-smoke-test
 ```
 
-The smoke test starts the configured HTTP or HTTPS server, ingests the configured PDFs, connects with the official C# MCP Streamable HTTP client, lists the tools, calls `search`, calls `fetch` with the returned ID, downloads the citation URL, and verifies that the legacy SSE endpoint is absent. For HTTPS, it creates a temporary loopback certificate that is not trusted or installed and is disposed when the test finishes.
+The smoke test starts the configured HTTP or HTTPS server, ingests the configured source files, connects with the official C# MCP Streamable HTTP client, lists the tools, calls `search`, calls `fetch` with the returned ID, downloads the citation URL, and verifies that the legacy SSE endpoint is absent. For HTTPS, it creates a temporary loopback certificate that is not trusted or installed and is disposed when the test finishes.
 
 ## Ingestion behavior
 
-The application reads every top-level `*.pdf`, extracts text plus embedded PNG and JPEG images with PdfPig (without OCR), generates image alternative text one image at a time, chunks content with `SemanticSimilarityChunker`, creates embeddings, and stores chunks in `InMemoryVectorStore`. Generated descriptions are included in fetched document text as `Image on page N: <description>`. Image enrichment is best-effort, so a failure to describe an image does not prevent the remaining document text from being ingested.
+The application reads every supported top-level file in `DATA_DIRECTORY`; subdirectories are not searched. It preserves UTF-8 Markdown and plain text, extracts selectable text plus embedded PNG and JPEG images from PDFs with PdfPig, and loads standalone PNG, JPEG, GIF, and WebP images. PDF extraction does not perform OCR.
+
+Images are sent one at a time to the configured chat model for alternative-text generation. The resulting text is chunked with `SemanticSimilarityChunker`, embedded, and stored in `InMemoryVectorStore`. Generated descriptions are included in fetched content as `Image: <description>` or `Image on page N: <description>`. Image enrichment is best-effort for documents that also contain text; a standalone image needs a successful description to produce searchable content.
 
 During ingestion, the console logs only AI request/response metadata such as content counts, media types, byte counts, model ID, and text lengths. Prompts, model responses, image bytes, and document contents are not written to logs. One-shot console search intentionally prints retrieved content to the terminal; treat captured terminal output as sensitive.

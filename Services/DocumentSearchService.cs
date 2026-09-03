@@ -11,10 +11,10 @@ using ProcessDataAI.Ingestion;
 namespace ProcessDataAI.Services;
 
 /// <summary>
-/// Ingests PDF files into an in-memory vector store and performs semantic document searches.
+/// Ingests supported source files into an in-memory vector store and performs semantic document searches.
 /// </summary>
 public sealed class DocumentSearchService(
-    PdfPigDocumentReader reader,
+    MultiFormatDocumentReader reader,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
     IChatClient chatClient,
     DocumentCatalog documentCatalog,
@@ -27,9 +27,9 @@ public sealed class DocumentSearchService(
     private bool _isIngested;
 
     /// <summary>
-    /// Ingests all top-level PDF files in a directory and makes them available for semantic search.
+    /// Ingests all supported top-level files in a directory and makes them available for semantic search.
     /// </summary>
-    /// <param name="dataDirectory">The directory containing PDF files.</param>
+    /// <param name="dataDirectory">The directory containing supported document files.</param>
     /// <param name="cancellationToken">A token used to cancel ingestion.</param>
     /// <returns>A task that completes after ingestion.</returns>
     public async Task IngestAsync(string dataDirectory, CancellationToken cancellationToken)
@@ -37,22 +37,27 @@ public sealed class DocumentSearchService(
         if (!Directory.Exists(dataDirectory))
         {
             throw new DirectoryNotFoundException(
-                $"Data directory '{dataDirectory}' was not found. Create it and add at least one PDF.");
+                $"Data directory '{dataDirectory}' was not found. Create it and add at least one supported file.");
         }
 
-        FileInfo[] pdfs = new DirectoryInfo(dataDirectory)
-            .GetFiles("*.pdf", SearchOption.TopDirectoryOnly)
+        FileInfo[] sourceFiles = new DirectoryInfo(dataDirectory)
+            .GetFiles("*", SearchOption.TopDirectoryOnly)
+            .Where(file => SupportedDocumentTypes.IsSupported(file.Extension))
             .OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (pdfs.Length == 0)
+        if (sourceFiles.Length == 0)
         {
-            throw new InvalidOperationException($"Data directory '{dataDirectory}' contains no PDF files.");
+            string extensions = string.Join(", ", SupportedDocumentTypes.Extensions);
+            throw new InvalidOperationException(
+                $"Data directory '{dataDirectory}' contains no supported files. Supported extensions: {extensions}.");
         }
 
-        await documentCatalog.RegisterSourcesAsync(pdfs, cancellationToken);
+        await documentCatalog.RegisterSourcesAsync(sourceFiles, cancellationToken);
 
-        logger.LogInformation("Discovered {PdfCount} PDF file(s) in the configured data directory", pdfs.Length);
+        logger.LogInformation(
+            "Discovered {DocumentCount} supported file(s) in the configured data directory",
+            sourceFiles.Length);
         logger.LogInformation("Generating an embedding to determine the provider vector dimensions");
 
         ReadOnlyMemory<float> probe;
@@ -103,32 +108,33 @@ public sealed class DocumentSearchService(
         var stopwatch = Stopwatch.StartNew();
         logger.LogInformation("Generating embeddings and writing chunks to the in-memory vector store");
 
-        await foreach (IngestionResult result in _pipeline.ProcessAsync(pdfs, cancellationToken))
+        await foreach (IngestionResult result in _pipeline.ProcessAsync(sourceFiles, cancellationToken))
         {
             if (!result.Succeeded)
             {
                 logger.LogError(
-                    "Failed to ingest PDF {DocumentName}; error type: {ErrorType}",
+                    "Failed to ingest document {DocumentName}; error type: {ErrorType}",
                     Path.GetFileName(result.DocumentId),
                     result.Exception?.GetType().Name ?? "unknown");
                 continue;
             }
 
             successfulDocuments++;
-            logger.LogInformation("Ingested PDF {DocumentName}", Path.GetFileName(result.DocumentId));
+            logger.LogInformation("Ingested document {DocumentName}", Path.GetFileName(result.DocumentId));
         }
 
         stopwatch.Stop();
         if (successfulDocuments == 0)
         {
-            throw new InvalidOperationException("No PDFs could be ingested. Review the preceding PDF error messages.");
+            throw new InvalidOperationException(
+                "No supported documents could be ingested. Review the preceding document error messages.");
         }
 
         _isIngested = true;
         logger.LogInformation(
-            "Ingestion completed: {DocumentCount}/{PdfCount} document(s), {ChunkCount} chunk(s), {ElapsedMilliseconds} ms",
+            "Ingestion completed: {DocumentCount}/{SourceCount} document(s), {ChunkCount} chunk(s), {ElapsedMilliseconds} ms",
             successfulDocuments,
-            pdfs.Length,
+            sourceFiles.Length,
             _writer.ChunkCount,
             stopwatch.ElapsedMilliseconds);
     }
